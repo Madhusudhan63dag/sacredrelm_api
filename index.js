@@ -67,95 +67,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Track Shipment Status
-app.get("/shiprocket/track/:shipmentId", async (req, res) => {
-  try {
-    const token = await getShiprocketToken();
-    const { shipmentId } = req.params;
-    
-    if (!shipmentId) {
-      return res.status(400).json({
-        success: false,
-        message: "Shipment ID is required"
-      });
-    }
-    
-    const response = await fetch(`https://apiv2.shiprocket.in/v1/external/courier/track/shipment/${shipmentId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    const data = await response.json();
-    
-    res.status(200).json({
-      success: true,
-      tracking: data
-    });
-  } catch (error) {
-    console.error("Error tracking shipment:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error tracking shipment",
-      error: error.message
-    });
-  }
-});
-
-// YouTube Subscription Verification API
-app.post("/verify-youtube-subscription", async (req, res) => {
-  const { accessToken, channelId, devMode, verificationCode } = req.body;
-  
-  // Development mode bypass for testing (only use in development!)
-  if (devMode === true && verificationCode === process.env.DEV_VERIFICATION_CODE) {
-    return res.status(200).json({
-      success: true,
-      isSubscribed: true,
-      message: "Development mode: Subscription verified! 10% discount applied."
-    });
-  }
-  
-  try {
-    // Fetch the user's subscription list using the access token
-    const response = await fetch(`https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=50`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`
-      }
-    });
-    
-    const data = await response.json();
-    
-    if (data.error) {
-      return res.status(400).json({
-        success: false,
-        message: "Failed to verify subscription",
-        error: data.error
-      });
-    }
-    
-    // Check if the user is subscribed to the specified channel
-    const isSubscribed = data.items && data.items.some(
-      item => item.snippet.resourceId.channelId === channelId
-    );
-    
-    res.status(200).json({
-      success: true,
-      isSubscribed,
-      message: isSubscribed 
-        ? "Subscription verified! 10% discount applied." 
-        : "Not subscribed to the channel."
-    });
-  } catch (error) {
-    console.error("YouTube subscription verification error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to verify YouTube subscription",
-      error: error.message
-    });
-  }
-});
 
 // Email Sending Route
 app.post("/send-email", async (req, res) => {
@@ -177,136 +88,259 @@ app.post("/send-email", async (req, res) => {
 });
 
 // Order Confirmation Email Route
+// app.post("/send-order-confirmation", async (req, res) => {
+//   const { customerEmail, orderDetails, customerDetails } = req.body;
+  
+//   // Log the incoming request data
+//   console.log("Received order confirmation request:", { 
+//     customerEmail, 
+//     orderDetails: JSON.stringify(orderDetails),
+//     customerDetails: JSON.stringify(customerDetails) 
+//   });
+  
+//   if (!customerEmail) {
+//     return res.status(400).json({
+//       success: false,
+//       message: "Customer email is required"
+//     });
+//   }
+  
+//   // Format the email content
+//   const emailSubject = `Order Confirmation #${orderDetails.orderNumber}`;
+  
+//   // Check if orderDetails.products is an array for multiple products
+//   const hasMultipleProducts = Array.isArray(orderDetails.products) && orderDetails.products.length > 0;
+  
+//   // Generate product table content
+//   let productsContent = '';
+  
+//   if (hasMultipleProducts) {
+//     // Create a table for multiple products
+//     productsContent = `Products:
+//   +${'-'.repeat(40)}+${'-'.repeat(10)}+${'-'.repeat(15)}+
+//   | Product Name                            | Quantity | Price        |
+//   +${'-'.repeat(40)}+${'-'.repeat(10)}+${'-'.repeat(15)}+
+//   `;
+
+//     // Add each product as a row in the table
+//     orderDetails.products.forEach(product => {
+//       const name = (product.name || '').padEnd(40).substring(0, 40);
+//       const quantity = (product.quantity?.toString() || '').padEnd(10).substring(0, 10);
+//       const price = ((orderDetails.currency || '₹') + ' ' + (product.price || '')).padEnd(15).substring(0, 15);
+      
+//       productsContent += `| ${name} | ${quantity} | ${price} |
+//   `;
+//     });
+    
+//     productsContent += `+${'-'.repeat(40)}+${'-'.repeat(10)}+${'-'.repeat(15)}+`;
+//   } else {
+//     // Single product format
+//     productsContent = `Product: ${orderDetails.productName || 'N/A'}
+//   Quantity: ${orderDetails.quantity || '1'}`;
+//   }
+  
+//   // Add HTML version of the email
+//   const htmlContent = `
+//     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+//       <h2>Order Confirmation</h2>
+//       <p>Dear ${customerDetails.firstName} ${customerDetails.lastName},</p>
+      
+//       <p>Thank you for your order! We're pleased to confirm that your order has been successfully placed.</p>
+      
+//       <h3>Order Details:</h3>
+//       <p><strong>Order Number:</strong> ${orderDetails.orderNumber}</p>
+      
+//       ${hasMultipleProducts ? 
+//         `<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+//           <tr style="background-color: #f2f2f2;">
+//             <th style="text-align: left; padding: 8px; border: 1px solid #ddd;">Product Name</th>
+//             <th style="text-align: center; padding: 8px; border: 1px solid #ddd;">Quantity</th>
+//             <th style="text-align: right; padding: 8px; border: 1px solid #ddd;">Price</th>
+//           </tr>
+//           ${orderDetails.products.map(product => 
+//             `<tr>
+//               <td style="padding: 8px; border: 1px solid #ddd;">${product.name || ''}</td>
+//               <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${product.quantity || ''}</td>
+//               <td style="text-align: right; padding: 8px; border: 1px solid #ddd;">'₹' ${orderDetails.currency || '₹'} ${product.price || ''}</td>
+//             </tr>`
+//           ).join('')}
+//         </table>` 
+//         : 
+//         `<p><strong>Product:</strong> ${orderDetails.productName || 'N/A'}<br>
+//         <strong>Quantity:</strong> ${orderDetails.quantity || '1'}</p>`
+//       }
+      
+//       <p><strong>Total Amount:</strong> ${orderDetails.currency || '₹'} ${orderDetails.totalAmount}<br>
+//       <strong>Payment Method:</strong> ${orderDetails.paymentMethod}<br>
+//       <strong>Payment ID:</strong> ${orderDetails.paymentId || 'N/A'}</p>
+      
+//       <h3>Customer Details:</h3>
+//       <p>
+//         <strong>Name:</strong> ${customerDetails.firstName} ${customerDetails.lastName}<br>
+//         <strong>Email:</strong> ${customerEmail}<br>
+//         <strong>Phone:</strong> ${customerDetails.phone || 'Not provided'}
+//       </p>
+      
+//       <h3>Shipping Address:</h3>
+//       <p>
+//         ${customerDetails.address || ''}<br>
+//         ${customerDetails.apartment ? customerDetails.apartment + '<br>' : ''}
+//         ${customerDetails.city || ''}${customerDetails.city && customerDetails.state ? ', ' : ''}${customerDetails.state || ''}${(customerDetails.city || customerDetails.state) && customerDetails.zip ? ' - ' : ''}${customerDetails.zip || ''}<br>
+//         ${customerDetails.country || ''}
+//       </p>
+      
+//       <p>We will process your order shortly. You will receive another email once your order ships.</p>
+      
+//       <p>If you have any questions, please contact our customer service.</p>
+      
+//       <p>Thank you for shopping with us!</p>
+//       <p>Best regards,<br></p>
+//     </div>
+//   `;
+  
+//   const mailOptions = {
+//     from: process.env.EMAIL_USER,
+//     to: customerEmail,
+//     cc: process.env.EMAIL_USER, // CC to admin email
+//     subject: emailSubject,
+//     html: htmlContent // Add HTML version for better formatting
+//   };
+
+//   try {
+//     console.log("Attempting to send email to:", customerEmail);
+//     const info = await transporter.sendMail(mailOptions);
+//     console.log("Email sent successfully:", info.messageId);
+//     res.status(200).json({ success: true, message: "Confirmation email sent successfully!" });
+//   } catch (error) {
+//     console.error("Error sending confirmation email:", error);
+//     res.status(500).json({ success: false, message: "Failed to send confirmation email", error: error.message });
+//   }
+//   });
+
+// // Abandoned Order Follow-up Email Route
 app.post("/send-order-confirmation", async (req, res) => {
   const { customerEmail, orderDetails, customerDetails } = req.body;
-  
-  // Log the incoming request data
-  console.log("Received order confirmation request:", { 
-    customerEmail, 
-    orderDetails: JSON.stringify(orderDetails),
-    customerDetails: JSON.stringify(customerDetails) 
-  });
-  
-  if (!customerEmail) {
-    return res.status(400).json({
-      success: false,
-      message: "Customer email is required"
-    });
-  }
-  
-  // Format the email content
-  const emailSubject = `Order Confirmation #${orderDetails.orderNumber}`;
-  
-  // Check if orderDetails.products is an array for multiple products
-  const hasMultipleProducts = Array.isArray(orderDetails.products) && orderDetails.products.length > 0;
-  
-  // Generate product table content
-  let productsContent = '';
-  
-  if (hasMultipleProducts) {
-    // Create a table for multiple products
-    productsContent = `Products:
-  +${'-'.repeat(40)}+${'-'.repeat(10)}+${'-'.repeat(15)}+
-  | Product Name                            | Quantity | Price        |
-  +${'-'.repeat(40)}+${'-'.repeat(10)}+${'-'.repeat(15)}+
-  `;
 
-    // Add each product as a row in the table
-    orderDetails.products.forEach(product => {
-      const name = (product.name || '').padEnd(40).substring(0, 40);
-      const quantity = (product.quantity?.toString() || '').padEnd(10).substring(0, 10);
-      const price = ((orderDetails.currency || '₹') + ' ' + (product.price || '')).padEnd(15).substring(0, 15);
-      
-      productsContent += `| ${name} | ${quantity} | ${price} |
-  `;
-    });
-    
-    productsContent += `+${'-'.repeat(40)}+${'-'.repeat(10)}+${'-'.repeat(15)}+`;
-  } else {
-    // Single product format
-    productsContent = `Product: ${orderDetails.productName || 'N/A'}
-  Quantity: ${orderDetails.quantity || '1'}`;
+  if (!customerEmail) {
+    return res.status(400).json({ success: false, message: "Customer email is required" });
   }
-  
-  // Add HTML version of the email
+
+  /* ---------- build HTML e-mail ---------- */
+  const hasMultiple = Array.isArray(orderDetails.products) && orderDetails.products.length > 0;
+
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2>Order Confirmation</h2>
       <p>Dear ${customerDetails.firstName} ${customerDetails.lastName},</p>
-      
       <p>Thank you for your order! We're pleased to confirm that your order has been successfully placed.</p>
-      
+
       <h3>Order Details:</h3>
       <p><strong>Order Number:</strong> ${orderDetails.orderNumber}</p>
-      
-      ${hasMultipleProducts ? 
-        `<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-          <tr style="background-color: #f2f2f2;">
-            <th style="text-align: left; padding: 8px; border: 1px solid #ddd;">Product Name</th>
-            <th style="text-align: center; padding: 8px; border: 1px solid #ddd;">Quantity</th>
-            <th style="text-align: right; padding: 8px; border: 1px solid #ddd;">Price</th>
-          </tr>
-          ${orderDetails.products.map(product => 
-            `<tr>
-              <td style="padding: 8px; border: 1px solid #ddd;">${product.name || ''}</td>
-              <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${product.quantity || ''}</td>
-              <td style="text-align: right; padding: 8px; border: 1px solid #ddd;">${orderDetails.currency || '₹'} ${product.price || ''}</td>
-            </tr>`
-          ).join('')}
-        </table>` 
-        : 
-        `<p><strong>Product:</strong> ${orderDetails.productName || 'N/A'}<br>
-        <strong>Quantity:</strong> ${orderDetails.quantity || '1'}</p>`
-      }
-      
-      <p><strong>Total Amount:</strong> ${orderDetails.currency || '₹'} ${orderDetails.totalAmount}<br>
-      <strong>Payment Method:</strong> ${orderDetails.paymentMethod}<br>
-      <strong>Payment ID:</strong> ${orderDetails.paymentId || 'N/A'}</p>
-      
+
+      ${hasMultiple
+        ? `<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+             <tr style="background-color: #f2f2f2;">
+               <th style="text-align:left;padding:8px;border:1px solid #ddd;">Product Name</th>
+               <th style="text-align:center;padding:8px;border:1px solid #ddd;">Quantity</th>
+               <th style="text-align:right;padding:8px;border:1px solid #ddd;">Price</th>
+             </tr>
+             ${orderDetails.products
+               .map(
+                 p => `<tr>
+                         <td style="padding:8px;border:1px solid #ddd;">${p.name || ""}</td>
+                         <td style="text-align:center;padding:8px;border:1px solid #ddd;">${p.quantity || ""}</td>
+                         <td style="text-align:right;padding:8px;border:1px solid #ddd;">${orderDetails.currency || "₹"} ${p.price || ""}</td>
+                       </tr>`
+               )
+               .join("")}
+           </table>`
+        : `<p><strong>Product:</strong> ${orderDetails.productName || "N/A"}<br>
+             <strong>Quantity:</strong> ${orderDetails.quantity || "1"}</p>`}
+
+      <p><strong>Total Amount:</strong> ${orderDetails.currency || "₹"} ${orderDetails.totalAmount}<br>
+         <strong>Payment Method:</strong> ${orderDetails.paymentMethod}<br>
+         <strong>Payment ID:</strong> ${orderDetails.paymentId || "N/A"}</p>
+
       <h3>Customer Details:</h3>
-      <p>
-        <strong>Name:</strong> ${customerDetails.firstName} ${customerDetails.lastName}<br>
-        <strong>Email:</strong> ${customerEmail}<br>
-        <strong>Phone:</strong> ${customerDetails.phone || 'Not provided'}
-      </p>
-      
+      <p><strong>Name:</strong> ${customerDetails.firstName} ${customerDetails.lastName}<br>
+         <strong>Email:</strong> ${customerEmail}<br>
+         <strong>Phone:</strong> ${customerDetails.phone || "Not provided"}</p>
+
       <h3>Shipping Address:</h3>
-      <p>
-        ${customerDetails.address || ''}<br>
-        ${customerDetails.apartment ? customerDetails.apartment + '<br>' : ''}
-        ${customerDetails.city || ''}${customerDetails.city && customerDetails.state ? ', ' : ''}${customerDetails.state || ''}${(customerDetails.city || customerDetails.state) && customerDetails.zip ? ' - ' : ''}${customerDetails.zip || ''}<br>
-        ${customerDetails.country || ''}
-      </p>
-      
+      <p>${customerDetails.address || ""}<br>
+         ${customerDetails.apartment ? customerDetails.apartment + "<br>" : ""}
+         ${customerDetails.city || ""}${customerDetails.city && customerDetails.state ? ", " : ""}${customerDetails.state || ""}${(customerDetails.city || customerDetails.state) && customerDetails.zip ? " - " : ""}${customerDetails.zip || ""}<br>
+         ${customerDetails.country || ""}</p>
+
       <p>We will process your order shortly. You will receive another email once your order ships.</p>
-      
       <p>If you have any questions, please contact our customer service.</p>
-      
       <p>Thank you for shopping with us!</p>
-      <p>Best regards,<br></p>
     </div>
   `;
-  
+
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: customerEmail,
-    cc: process.env.EMAIL_USER, // CC to admin email
-    subject: emailSubject,
-    html: htmlContent // Add HTML version for better formatting
+    cc: process.env.EMAIL_USER,
+    subject: `Order Confirmation #${orderDetails.orderNumber}`,
+    html: htmlContent
   };
 
-  try {
-    console.log("Attempting to send email to:", customerEmail);
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Email sent successfully:", info.messageId);
-    res.status(200).json({ success: true, message: "Confirmation email sent successfully!" });
-  } catch (error) {
-    console.error("Error sending confirmation email:", error);
-    res.status(500).json({ success: false, message: "Failed to send confirmation email", error: error.message });
-  }
-  });
+  /* ---------- build WhatsApp payload ---------- */
+  const recipient = customerDetails.phone;              // must be +<country><number>[12]
+  const templateId = "1160163365950061";  // keep in .env
 
-// Abandoned Order Follow-up Email Route
+  // convert array of products → "Product1×2, Product2×1"
+  const productsText = hasMultiple
+    ? orderDetails.products.map(p => `${p.name}×${p.quantity}`).join(", ")
+    : `${orderDetails.productName || "Item"}×${orderDetails.quantity || 1}`;
+
+  const bodyVars = [
+    customerDetails.firstName,
+    orderDetails.orderNumber,
+    productsText,
+    orderDetails.totalAmount
+  ];
+
+  const whatsappPayload = {
+    to: recipient,
+    type: "template",
+    callback_data: "order_confirmation_sent",
+    template: {
+      id: templateId,
+      header_media_url: "https://sacredrelm.com/static/media/logo.aade94b43e178c164667.png",
+      body_text_variables: bodyVars.join("|")
+    }
+  };
+
+  /* ---------- send WhatsApp first ---------- */
+  try {
+    await axios.post(
+      `https://api.whatstool.business/developers/v2/messages/${process.env.WHATSAPP_API_NO}`,
+      whatsappPayload,
+      {
+        headers: {
+          "x-api-key": process.env.CAMPH_API_KEY,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+  } catch (waErr) {
+    console.error("WhatsApp send failed:", waErr.response?.data || waErr.message);
+    // do NOT return; we still want to e-mail the customer
+  }
+
+  /* ---------- always send e-mail ---------- */
+  try {
+    await transporter.sendMail(mailOptions);
+    return res.status(200).json({ success: true, message: "Order confirmation e-mail sent" });
+  } catch (mailErr) {
+    console.error("E-mail send failed:", mailErr);
+    return res.status(500).json({ success: false, message: "Both WhatsApp and e-mail failed", error: mailErr.message });
+  }
+});
+
+
 
 app.post("/send-abandoned-order-email", async (req, res) => {
   const { customerEmail, orderDetails, customerDetails } = req.body;
@@ -815,37 +849,6 @@ app.post("/send-advance-payment-confirmation", async (req, res) => {
   }
 });
 
-// Server Metrics Route
-app.get("/server-metrics", (req, res) => {
-  // Get initial CPU measurements
-  const startCpuUsage = process.cpuUsage();
-  
-  // Add a small delay to measure CPU usage over time
-  setTimeout(() => {
-    // Get CPU usage after delay to calculate difference
-    const endCpuUsage = process.cpuUsage(startCpuUsage);
-    
-    // Get memory usage
-    const memoryUsage = process.memoryUsage();
-    
-    // Format and return the metrics
-    res.status(200).json({
-      success: true,
-      timestamp: new Date().toISOString(),
-      cpu: {
-        user: `${Math.round(endCpuUsage.user / 1000)} microseconds`,
-        system: `${Math.round(endCpuUsage.system / 1000)} microseconds`,
-      },
-      memory: {
-        rss: `${Math.round(memoryUsage.rss / 1024 / 1024)} MB`, // Resident Set Size
-        heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)} MB`, // Total heap size
-        heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)} MB`, // Used heap size
-        external: `${Math.round(memoryUsage.external / 1024 / 1024)} MB`, // External memory
-        arrayBuffers: `${Math.round((memoryUsage.arrayBuffers || 0) / 1024 / 1024)} MB` // ArrayBuffers memory
-      }
-    });
-  }, 100); // 100ms delay to measure CPU usage
-});
 
 
 
