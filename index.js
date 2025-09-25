@@ -84,6 +84,125 @@ app.post("/send-email", async (req, res) => {
 });
 
 // // Abandoned Order Follow-up Email Route
+// app.post("/send-order-confirmation", async (req, res) => {
+//   const { customerEmail, orderDetails, customerDetails } = req.body;
+
+//   if (!customerEmail) {
+//     return res.status(400).json({ success: false, message: "Customer email is required" });
+//   }
+
+//   /* ---------- build HTML e-mail ---------- */
+//   const hasMultiple = Array.isArray(orderDetails.products) && orderDetails.products.length > 0;
+
+//   const htmlContent = `
+//     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+//       <h2>Order Confirmation</h2>
+//       <p>Dear ${customerDetails.firstName} ${customerDetails.lastName},</p>
+//       <p>Thank you for your order! We're pleased to confirm that your order has been successfully placed.</p>
+
+//       <h3>Order Details:</h3>
+//       <p><strong>Order Number:</strong> ${orderDetails.orderNumber}</p>
+
+//       ${hasMultiple
+//         ? `<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+//              <tr style="background-color: #f2f2f2;">
+//                <th style="text-align:left;padding:8px;border:1px solid #ddd;">Product Name</th>
+//                <th style="text-align:center;padding:8px;border:1px solid #ddd;">Quantity</th>
+//                <th style="text-align:right;padding:8px;border:1px solid #ddd;">Price</th>
+//              </tr>
+//              ${orderDetails.products
+//                .map(
+//                  p => `<tr>
+//                          <td style="padding:8px;border:1px solid #ddd;">${p.name || ""}</td>
+//                          <td style="text-align:center;padding:8px;border:1px solid #ddd;">${p.quantity || ""}</td>
+//                          <td style="text-align:right;padding:8px;border:1px solid #ddd;">${orderDetails.currency || "₹"} ${p.price || ""}</td>
+//                        </tr>`
+//                )
+//                .join("")}
+//            </table>`
+//         : `<p><strong>Product:</strong> ${orderDetails.productName || "N/A"}<br>
+//              <strong>Quantity:</strong> ${orderDetails.quantity || "1"}</p>`}
+
+//       <p><strong>Total Amount:</strong> ${orderDetails.currency || "₹"} ${orderDetails.totalAmount}<br>
+//          <strong>Payment Method:</strong> ${orderDetails.paymentMethod}<br>
+//          <strong>Payment ID:</strong> ${orderDetails.paymentId || "N/A"}</p>
+
+//       <h3>Customer Details:</h3>
+//       <p><strong>Name:</strong> ${customerDetails.firstName} ${customerDetails.lastName}<br>
+//          <strong>Email:</strong> ${customerEmail}<br>
+//          <strong>Phone:</strong> ${customerDetails.phone || "Not provided"}</p>
+
+//       <h3>Shipping Address:</h3>
+//       <p>${customerDetails.address || ""}<br>
+//          ${customerDetails.apartment ? customerDetails.apartment + "<br>" : ""}
+//          ${customerDetails.city || ""}${customerDetails.city && customerDetails.state ? ", " : ""}${customerDetails.state || ""}${(customerDetails.city || customerDetails.state) && customerDetails.zip ? " - " : ""}${customerDetails.zip || ""}<br>
+//          ${customerDetails.country || ""}</p>
+
+//       <p>We will process your order shortly. You will receive another email once your order ships.</p>
+//       <p>If you have any questions, please contact our customer service.</p>
+//       <p>Thank you for shopping with us!</p>
+//     </div>
+//   `;
+
+//   const mailOptions = {
+//     from: process.env.EMAIL_USER,
+//     to: customerEmail,
+//     cc: process.env.EMAIL_USER,
+//     subject: `Order Confirmation #${orderDetails.orderNumber}`,
+//     html: htmlContent
+//   };
+
+//   /* ---------- build WhatsApp payload ---------- */
+//   const recipient = customerDetails.phone;              // must be +<country><number>[12]
+//   const templateId = "1160163365950061";  // keep in .env
+
+//   // convert array of products → "Product1×2, Product2×1"
+//   const productsText = hasMultiple
+//     ? orderDetails.products.map(p => `${p.name}×${p.quantity}`).join(", ")
+//     : `${orderDetails.productName || "Item"}×${orderDetails.quantity || 1}`;
+
+//   const bodyVars = [
+//     customerDetails.firstName,
+//     orderDetails.orderNumber,
+//     productsText,
+//     orderDetails.totalAmount
+//   ];
+
+//   const whatsappPayload = {
+//     to: recipient,
+//     type: "template",
+//     callback_data: "order_confirmation_sent",
+//     template: {
+//       id: templateId,
+//       header_media_url: "https://sacredrelm.com/static/media/logo.aade94b43e178c164667.png",
+//       body_text_variables: bodyVars.join("|")
+//     }
+//   };
+
+
+//   try {
+//     await axios.post(
+//       `https://api.whatstool.business/developers/v2/messages/${process.env.WHATSAPP_API_NO}`,
+//       whatsappPayload,
+//       {
+//         headers: {
+//           "x-api-key": process.env.CAMPH_API_KEY,
+//           "Content-Type": "application/json"
+//         }
+//       }
+//     );
+//   } catch (waErr) {
+//     console.error("WhatsApp send failed:", waErr.response?.data || waErr.message);
+//   }
+
+//   try {
+//     await transporter.sendMail(mailOptions);
+//     return res.status(200).json({ success: true, message: "Order confirmation e-mail sent" });
+//   } catch (mailErr) {
+//     console.error("E-mail send failed:", mailErr);
+//     return res.status(500).json({ success: false, message: "Both WhatsApp and e-mail failed", error: mailErr.message });
+//   }
+// });
 app.post("/send-order-confirmation", async (req, res) => {
   const { customerEmail, orderDetails, customerDetails } = req.body;
 
@@ -91,7 +210,7 @@ app.post("/send-order-confirmation", async (req, res) => {
     return res.status(400).json({ success: false, message: "Customer email is required" });
   }
 
-  /* ---------- build HTML e-mail ---------- */
+  /* ---------- build HTML e-mail (moved up to avoid blocking) ---------- */
   const hasMultiple = Array.isArray(orderDetails.products) && orderDetails.products.length > 0;
 
   const htmlContent = `
@@ -153,10 +272,9 @@ app.post("/send-order-confirmation", async (req, res) => {
   };
 
   /* ---------- build WhatsApp payload ---------- */
-  const recipient = customerDetails.phone;              // must be +<country><number>[12]
-  const templateId = "1160163365950061";  // keep in .env
+  const recipient = customerDetails.phone;
+  const templateId = "1160163365950061";
 
-  // convert array of products → "Product1×2, Product2×1"
   const productsText = hasMultiple
     ? orderDetails.products.map(p => `${p.name}×${p.quantity}`).join(", ")
     : `${orderDetails.productName || "Item"}×${orderDetails.quantity || 1}`;
@@ -179,30 +297,108 @@ app.post("/send-order-confirmation", async (req, res) => {
     }
   };
 
+  /* ---------- PARALLEL EXECUTION WITH TIMEOUT HANDLING ---------- */
+  const TIMEOUT_MS = 8000; // 8 second timeout for each service
 
-  try {
-    await axios.post(
-      `https://api.whatstool.business/developers/v2/messages/${process.env.WHATSAPP_API_NO}`,
-      whatsappPayload,
-      {
-        headers: {
-          "x-api-key": process.env.CAMPH_API_KEY,
-          "Content-Type": "application/json"
+  // Create timeout wrapper function
+  const withTimeout = (promise, timeoutMs, serviceName) => {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error(`${serviceName} timeout after ${timeoutMs}ms`)), timeoutMs)
+      )
+    ]);
+  };
+
+  // WhatsApp sending function with timeout
+  const sendWhatsApp = () => {
+    return withTimeout(
+      axios.post(
+        `https://api.whatstool.business/developers/v2/messages/${process.env.WHATSAPP_API_NO}`,
+        whatsappPayload,
+        {
+          headers: {
+            "x-api-key": process.env.CAMPH_API_KEY,
+            "Content-Type": "application/json"
+          },
+          timeout: 6000 // Axios-level timeout
         }
-      }
+      ),
+      TIMEOUT_MS,
+      'WhatsApp'
     );
-  } catch (waErr) {
-    console.error("WhatsApp send failed:", waErr.response?.data || waErr.message);
-  }
+  };
 
+  // Email sending function with timeout
+  const sendEmail = () => {
+    return withTimeout(
+      transporter.sendMail(mailOptions),
+      TIMEOUT_MS,
+      'Email'
+    );
+  };
+
+  /* ---------- EXECUTE BOTH OPERATIONS IN PARALLEL ---------- */
   try {
-    await transporter.sendMail(mailOptions);
-    return res.status(200).json({ success: true, message: "Order confirmation e-mail sent" });
-  } catch (mailErr) {
-    console.error("E-mail send failed:", mailErr);
-    return res.status(500).json({ success: false, message: "Both WhatsApp and e-mail failed", error: mailErr.message });
+    // Use Promise.allSettled to handle both success and failure cases
+    const [whatsappResult, emailResult] = await Promise.allSettled([
+      sendWhatsApp(),
+      sendEmail()
+    ]);
+
+    // Analyze results
+    const whatsappSuccess = whatsappResult.status === 'fulfilled';
+    const emailSuccess = emailResult.status === 'fulfilled';
+
+    // Log any failures for debugging
+    if (!whatsappSuccess) {
+      console.error("WhatsApp send failed:", whatsappResult.reason?.response?.data || whatsappResult.reason?.message || whatsappResult.reason);
+    }
+    if (!emailSuccess) {
+      console.error("Email send failed:", emailResult.reason?.message || emailResult.reason);
+    }
+
+    // Response logic based on results
+    if (emailSuccess && whatsappSuccess) {
+      return res.status(200).json({ 
+        success: true, 
+        message: "Order confirmation sent via email and WhatsApp successfully" 
+      });
+    } else if (emailSuccess && !whatsappSuccess) {
+      return res.status(200).json({ 
+        success: true, 
+        message: "Order confirmation sent via email successfully. WhatsApp delivery failed.",
+        warnings: ["WhatsApp notification failed"]
+      });
+    } else if (!emailSuccess && whatsappSuccess) {
+      return res.status(200).json({ 
+        success: true, 
+        message: "Order confirmation sent via WhatsApp successfully. Email delivery failed.",
+        warnings: ["Email notification failed"] 
+      });
+    } else {
+      // Both failed
+      return res.status(500).json({ 
+        success: false, 
+        message: "Failed to send order confirmation via both email and WhatsApp",
+        errors: {
+          email: emailResult.reason?.message || "Email sending failed",
+          whatsapp: whatsappResult.reason?.message || "WhatsApp sending failed"
+        }
+      });
+    }
+
+  } catch (error) {
+    // This shouldn't happen with Promise.allSettled, but just in case
+    console.error("Unexpected error in order confirmation:", error);
+    return res.status(500).json({ 
+      success: false, 
+      message: "Unexpected error occurred while sending order confirmation",
+      error: error.message 
+    });
   }
 });
+
 
 
 
