@@ -5,7 +5,11 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "vercel-build": "echo 'Building...'",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": "18.x"
   },
   "keywords": [],
   "author": "",
