@@ -31,18 +31,7 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors({
   origin: [
-    'https://e-commerce-two-neon.vercel.app',
-    'https://sampoornarogya.com',
-    'https://agent-sigma-livid.vercel.app',
     'https://sacredrelm.com',
-    'https://myiandi.com',
-    'https://vlog-camera.vercel.app',
-    'https://glowglazecommerce.vercel.app', // Fixed: removed trailing slash and added this domain correctly
-    'https://beyondslim.in',
-    'https://glowglaz.com',
-    'https://glowglaz-vert.vercel.app',
-    'https://drjoints.in',
-    'https://drjoints.vercel.app',
     'http://localhost:3000'
   ],
   methods: ['GET', 'POST', 'OPTIONS'],
@@ -86,136 +75,6 @@ app.post("/send-email", async (req, res) => {
     res.status(500).json({ success: false, message: "Email sending failed!", error });
   }
 });
-
-// Order Confirmation Email Route
-// app.post("/send-order-confirmation", async (req, res) => {
-//   const { customerEmail, orderDetails, customerDetails } = req.body;
-  
-//   // Log the incoming request data
-//   console.log("Received order confirmation request:", { 
-//     customerEmail, 
-//     orderDetails: JSON.stringify(orderDetails),
-//     customerDetails: JSON.stringify(customerDetails) 
-//   });
-  
-//   if (!customerEmail) {
-//     return res.status(400).json({
-//       success: false,
-//       message: "Customer email is required"
-//     });
-//   }
-  
-//   // Format the email content
-//   const emailSubject = `Order Confirmation #${orderDetails.orderNumber}`;
-  
-//   // Check if orderDetails.products is an array for multiple products
-//   const hasMultipleProducts = Array.isArray(orderDetails.products) && orderDetails.products.length > 0;
-  
-//   // Generate product table content
-//   let productsContent = '';
-  
-//   if (hasMultipleProducts) {
-//     // Create a table for multiple products
-//     productsContent = `Products:
-//   +${'-'.repeat(40)}+${'-'.repeat(10)}+${'-'.repeat(15)}+
-//   | Product Name                            | Quantity | Price        |
-//   +${'-'.repeat(40)}+${'-'.repeat(10)}+${'-'.repeat(15)}+
-//   `;
-
-//     // Add each product as a row in the table
-//     orderDetails.products.forEach(product => {
-//       const name = (product.name || '').padEnd(40).substring(0, 40);
-//       const quantity = (product.quantity?.toString() || '').padEnd(10).substring(0, 10);
-//       const price = ((orderDetails.currency || '₹') + ' ' + (product.price || '')).padEnd(15).substring(0, 15);
-      
-//       productsContent += `| ${name} | ${quantity} | ${price} |
-//   `;
-//     });
-    
-//     productsContent += `+${'-'.repeat(40)}+${'-'.repeat(10)}+${'-'.repeat(15)}+`;
-//   } else {
-//     // Single product format
-//     productsContent = `Product: ${orderDetails.productName || 'N/A'}
-//   Quantity: ${orderDetails.quantity || '1'}`;
-//   }
-  
-//   // Add HTML version of the email
-//   const htmlContent = `
-//     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-//       <h2>Order Confirmation</h2>
-//       <p>Dear ${customerDetails.firstName} ${customerDetails.lastName},</p>
-      
-//       <p>Thank you for your order! We're pleased to confirm that your order has been successfully placed.</p>
-      
-//       <h3>Order Details:</h3>
-//       <p><strong>Order Number:</strong> ${orderDetails.orderNumber}</p>
-      
-//       ${hasMultipleProducts ? 
-//         `<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-//           <tr style="background-color: #f2f2f2;">
-//             <th style="text-align: left; padding: 8px; border: 1px solid #ddd;">Product Name</th>
-//             <th style="text-align: center; padding: 8px; border: 1px solid #ddd;">Quantity</th>
-//             <th style="text-align: right; padding: 8px; border: 1px solid #ddd;">Price</th>
-//           </tr>
-//           ${orderDetails.products.map(product => 
-//             `<tr>
-//               <td style="padding: 8px; border: 1px solid #ddd;">${product.name || ''}</td>
-//               <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${product.quantity || ''}</td>
-//               <td style="text-align: right; padding: 8px; border: 1px solid #ddd;">'₹' ${orderDetails.currency || '₹'} ${product.price || ''}</td>
-//             </tr>`
-//           ).join('')}
-//         </table>` 
-//         : 
-//         `<p><strong>Product:</strong> ${orderDetails.productName || 'N/A'}<br>
-//         <strong>Quantity:</strong> ${orderDetails.quantity || '1'}</p>`
-//       }
-      
-//       <p><strong>Total Amount:</strong> ${orderDetails.currency || '₹'} ${orderDetails.totalAmount}<br>
-//       <strong>Payment Method:</strong> ${orderDetails.paymentMethod}<br>
-//       <strong>Payment ID:</strong> ${orderDetails.paymentId || 'N/A'}</p>
-      
-//       <h3>Customer Details:</h3>
-//       <p>
-//         <strong>Name:</strong> ${customerDetails.firstName} ${customerDetails.lastName}<br>
-//         <strong>Email:</strong> ${customerEmail}<br>
-//         <strong>Phone:</strong> ${customerDetails.phone || 'Not provided'}
-//       </p>
-      
-//       <h3>Shipping Address:</h3>
-//       <p>
-//         ${customerDetails.address || ''}<br>
-//         ${customerDetails.apartment ? customerDetails.apartment + '<br>' : ''}
-//         ${customerDetails.city || ''}${customerDetails.city && customerDetails.state ? ', ' : ''}${customerDetails.state || ''}${(customerDetails.city || customerDetails.state) && customerDetails.zip ? ' - ' : ''}${customerDetails.zip || ''}<br>
-//         ${customerDetails.country || ''}
-//       </p>
-      
-//       <p>We will process your order shortly. You will receive another email once your order ships.</p>
-      
-//       <p>If you have any questions, please contact our customer service.</p>
-      
-//       <p>Thank you for shopping with us!</p>
-//       <p>Best regards,<br></p>
-//     </div>
-//   `;
-  
-//   const mailOptions = {
-//     from: process.env.EMAIL_USER,
-//     to: customerEmail,
-//     cc: process.env.EMAIL_USER, // CC to admin email
-//     subject: emailSubject,
-//     html: htmlContent // Add HTML version for better formatting
-//   };
-
-//   try {
-//     console.log("Attempting to send email to:", customerEmail);
-//     const info = await transporter.sendMail(mailOptions);
-//     console.log("Email sent successfully:", info.messageId);
-//     res.status(200).json({ success: true, message: "Confirmation email sent successfully!" });
-//   } catch (error) {
-//     console.error("Error sending confirmation email:", error);
-//     res.status(500).json({ success: false, message: "Failed to send confirmation email", error: error.message });
-//   }
-//   });
 
 // // Abandoned Order Follow-up Email Route
 app.post("/send-order-confirmation", async (req, res) => {
@@ -313,7 +172,7 @@ app.post("/send-order-confirmation", async (req, res) => {
     }
   };
 
-  /* ---------- send WhatsApp first ---------- */
+
   try {
     await axios.post(
       `https://api.whatstool.business/developers/v2/messages/${process.env.WHATSAPP_API_NO}`,
@@ -327,10 +186,8 @@ app.post("/send-order-confirmation", async (req, res) => {
     );
   } catch (waErr) {
     console.error("WhatsApp send failed:", waErr.response?.data || waErr.message);
-    // do NOT return; we still want to e-mail the customer
   }
 
-  /* ---------- always send e-mail ---------- */
   try {
     await transporter.sendMail(mailOptions);
     return res.status(200).json({ success: true, message: "Order confirmation e-mail sent" });
